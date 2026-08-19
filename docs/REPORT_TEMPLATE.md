@@ -4,11 +4,11 @@
 
 | Student | ID | GitHub |
 |---|---|---|
-| | | |
-| | | |
-| | | |
+| Cristian Aristizabal | 1000104617 | Cristian-Aristi |
+| Santiago Pinzon | 1000103871 | els4nty |
+| Daniel Peña | 1000099589 | KronorCR |
 
-Repository: `URL`
+Repository: `https://github.com/ARSW-2026-2/lab-arsw-relic-rush-concurrency-deadlocks-g02.git`
 
 Final commit: `SHA`
 
@@ -29,10 +29,14 @@ PASTE RELEVANT OUTPUT
 
 Explain the responsibility of both barriers:
 
-- `roundStart`:
-- `roundEnd`:
+- `roundStart`: First of all, `roundStart` is essentially a `CyclicBarrier` set to the number of adventurers + 1. The problem it solves is that no adventurer can start the next round unless all adventurers are in the same round, and furthermore, no adventurer can start until the coordinator allows it. This ensures that the invariant is maintained as it should be.
+- `roundEnd`: The `roundEnd` function helps us with the game's end barrier; every adventurer passes through this section after `playTurn()`, and the coordinator also passes through this barrier. This solves the problem of correctly detecting the end of the game, since by that point the coordinator has already entered all the scores, and all game values are up to date. This prevents the coordinator from posting a message midway through the game that contains data that isn't the latest version.
 
-Why is `Thread.sleep(...)` not a valid replacement for a barrier?
+3. Why is `Thread.sleep(...)` not a valid replacement for a barrier?
+> Ans: We can't do this, because Thread.sleep() pauses all threads for the amount of time we specify as an argument, and even if we happen to match the time of a particular adventurer, it can vary in every case. You can't use this implementation because you don't know how long the adventurers will take on their turn—some may take longer, and others may take less time.
+
+4. What memory-consistency benefit do you obtain by reading the snapshot after the barrier?
+> Ans: By reading the snapshot after the barrier, we ensure that the changes made by the other threads before reaching `await()` are visible. This way, the coordinator obtains the updated values without needing `volatile` or `synchronized`. So the data will be up to date—the latest version of each adventurer.
 
 ## 3. Thread-safety problems
 
