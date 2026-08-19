@@ -207,7 +207,9 @@ Possible tools you may evaluate:
 - explicit locks
 
 You are expected to choose, not blindly use all of them.
-
+### Explanation:
+>We identified that the totalCrafted variable was using a counter but it was being updated with a read, modify and write the answer but as we know this doesn't work on multiple threads so we decided to use AtomicInteger to protect the thread safety.
+>And the other thing that we identified was that the events were being handled by an ArraylList but modifying an ArrayList with concurrent threads like additions that may lead to lost elements or resizing the array may lead to a IndexOutOfBounds so we decided as in the workshop to use a ConcurrentLinkedQueue which allows us to make concurrent insertions.  
 ---
 
 # 10. Part III - Reproduce and diagnose the deadlock
