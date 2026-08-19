@@ -168,6 +168,9 @@ Answer in `docs/REPORT_TEMPLATE.md`:
 3. Why would `Thread.sleep(...)` be an incorrect coordination strategy here?
 4. What memory-consistency benefit do you obtain by reading the snapshot after the barrier?
 
+### Solution:
+> We answer this point in the REPORT_TEMPLATE.MD, in this point we put the answer according to the code that we have, and the analysis we do.
+
 ---
 
 # 9. Part II - Make the shared ledger thread-safe
