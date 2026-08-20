@@ -51,6 +51,7 @@ public final class DeadlockProbe {
                     info.getLockName(),
                     info.getLockOwnerName());
         }
+
     }
 
     private static void run(CountDownLatch start, ForgeStation first, ForgeStation second) {
