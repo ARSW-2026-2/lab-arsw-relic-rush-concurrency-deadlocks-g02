@@ -92,9 +92,11 @@ Concurrency was preserved by using *fine-grained locking*. Instead of using a si
 
 | Players | Stations | Rounds | Deadlock? | Invariant result |
 |---:|---:|---:|---|---|
-| 8 | 6 | 50 | | |
-| 32 | 8 | 100 | | |
-| 128 | 8 | 100 | | |
+| 8 | 6 | 50 | No deadlocks | Always "OK" |
+| 32 | 8 | 100 | No deadlocks | Always "OK" |
+| 128 | 8 | 100 | No deadlocks | Always "OK" |
+
+For this part, we put in the ADR, the solution of the point and the necessary evidence.
 
 ## 6. Architectural trade-offs
 

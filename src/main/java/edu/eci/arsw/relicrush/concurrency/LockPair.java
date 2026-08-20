@@ -3,10 +3,12 @@ package edu.eci.arsw.relicrush.concurrency;
 import edu.eci.arsw.relicrush.model.ForgeStation;
 
 /**
- * Starter implementation intentionally contains a deadlock risk.
- *
- * Students: do NOT replace this with one global lock. Preserve concurrency
- * between forge operations that use disjoint stations.
+ * LAB 3 - Part V: deadlock prevention via deterministic lock ordering.
+ * All forge stations are ordered globally by ForgeStation.id(); the
+ * lower-id station's monitor is always acquired before the higher-id
+ * one, regardless of the order the caller passed them in. This breaks
+ * the "circular wait" Coffman condition without introducing any
+ * global/game-wide lock.
  */
 public final class LockPair {
 
@@ -14,23 +16,22 @@ public final class LockPair {
     }
 
     public static void withBoth(ForgeStation first, ForgeStation second, Runnable action) {
-        // TODO LAB 3: This acquisition strategy can create circular wait.
-        // Fix it using a deterministic ordering strategy (or justify another
-        // deadlock-prevention approach) while preserving fine-grained locking.
-        synchronized (first) {
-            // This small delay makes the deadlock easier to reproduce in the starter.
-            sleepQuietly(2);
-            synchronized (second) {
+        // TODO LAB 3: Solved
+        if (first.id() == second.id()) {
+            synchronized (first) {
+                action.run();
+            }
+            return;
+        }
+
+        ForgeStation lower = first.id() < second.id() ? first : second;
+        ForgeStation higher = first.id() < second.id() ? second : first;
+
+        synchronized (lower) {
+            synchronized (higher) {
                 action.run();
             }
         }
-    }
 
-    private static void sleepQuietly(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 }

@@ -2,7 +2,6 @@ package edu.eci.arsw.relicrush.concurrency;
 
 import edu.eci.arsw.relicrush.model.ForgeEvent;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
