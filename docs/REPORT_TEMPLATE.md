@@ -40,10 +40,10 @@ Explain the responsibility of both barriers:
 
 ## 3. Thread-safety problems
 
-| Shared state | Problem | Invariant at risk | Solution | Why this solution? |
-|---|---|---|---|---|
-| | | | | |
-| | | | | |
+| Shared state            | Problem                                                                                        | Invariant at risk                                             | Solution                                                             | Why this solution?                                                                          |
+|-------------------------|------------------------------------------------------------------------------------------------|---------------------------------------------------------------|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| int totalCrafted        | Non-atomic read modify and write causing lost updates.                                         | sum of all players scores and totalCrafted                    | Replacing the int type by AtomicInteger and using .incrementAndGet() | Provides lock-free, thread-safe atomic increments, avoiding a global lock and miss-writings |
+| List<ForgeEvent> events | ArrayList isn't thread safe because it can lead to lost elements or IndexOutOfBoundsException. | ForgeLedger.totalCrafted() == number of entries to ForgeEvent | Using a ConcurrentLinkedQueue instead of an ArrayList                | Because this structure is specially designed for safe concurrent insertions.                |
 
 ## 4. Deadlock diagnosis
 
@@ -111,15 +111,15 @@ Discuss:
 ## 7. Mini ADR
 
 ### Context
-
+> The starter code acquired ForgeStation monitors in the arbitrary order requested by players, creating a Circular Wait Coffman condition and deadlocks.
 ### Decision
-
+> We implemented a deterministic lock acquisition strategy. LockPair always acquires the monitor with the lowest ForgeStation.id() first.
 ### Alternatives considered
-
+> A global lock but this was rejected because it could've destroyed concurrency and tryLock with timeouts but this one was rejected for adding complexity and livelock risks.
 ### Consequences
-
+> All future multi-resource acquisitions must strictly route through LockPair to maintain the global ordering rule.
 ### Evidence
-
+> The solution consistently passes DeadlockProbe and the stress-testing InvariantProbe without freezing or breaking invariants.
 ## 8. Conclusions
 
 1.

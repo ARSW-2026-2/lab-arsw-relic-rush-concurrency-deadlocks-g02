@@ -328,23 +328,27 @@ Discuss at least:
 ### Correctness / reliability
 
 - Which invariants are protected?
+>The invariants that are protected are scoreSum, ledgerTotal and eventCount.
 - What evidence demonstrates that they hold?
-
+>The use of AtomicInteger and ConcurrentinkedQueue in ForgeLedger prevents lost updates during concurrent writes. The CyclicBarrier ensures that all threads finish before the program reads the snapshot and the InvariantProbe runs successfully without breaking the invariant.   
 ### Performance / throughput
 
 - Where can lock contention appear?
+>This happens when several adventurers randomly select the same stations at the exact same time.
 - Why is a global lock undesirable?
+>Because it would force multiple threads to being executed sequentially which isn't the objective of making a concurrent program.
 - Which craft operations can still execute concurrently?
-
+>For example if player 1 is using stations A/B and player 2 is using stations C/D it can perfectly be parallel.
 ### Maintainability
 
 - Is lock ownership obvious?
+>It is completely encapsulated inside LockPair.withBoth(). The adventurer doesn't need to manage synchronized blocks.
 - Is the lock ordering rule explicit and easy to preserve?
-
+>Yes it is, if some future developer would need to add new features. Then he'll only need to use de LockPair utility in this way we can reduce the reinsertion of deadlocks.
 ### Scalability
 
 - What happens when the number of players grows while the number of stations stays constant?
-
+>For example if we run 128 players with only 8 stations would scale safely but the performance will be very reduced because most of the threads will be locked waiting to execute.
 ---
 
 # 15. Mini ADR
@@ -357,17 +361,72 @@ docs/ADR-001-deadlock-prevention.md
 
 Use this structure:
 
-```markdown
+
 # ADR-001: Deadlock prevention strategy
 
-## Context
-## Decision
-## Alternatives considered
-## Quality attributes affected
-## Evidence
-## Consequences
-## Risks
-```
+# Part V - Prevent the deadlock:
+
+## Context:
+This part give us the next information:
+The starter acquires two station monitors in the order requested by the player.
+
+Your solution must prevent deadlocks without using one global lock for every craft operation.
+
+Recommended direction:
+
+> Define a deterministic global ordering for forge stations and always acquire locks in that order.
+
+You may propose a different strategy if you can justify it technically.
+
+## Decision:
+
+We fixed the LockPair() class, removing the `sleepQuietly(2)` since we shouldn’t use it—it’s a workaround to force a deadlock. Therefore, to properly implement the architecture, we removed it. The “first then second” order also disappears due to an ID comparison, and we fixed a rule that applies if two entities are at the same station.
+
+
+## Alternatives considered:
+
+This is the best approach because it meets the requirements, uses the correct architecture, preserves the invariant, and uses `synchronized` properly—implementing it to prevent deadlocks, similar to the strategy we saw in the workshop, where we compared the IDs so that the adventurer could continue their action.
+
+## Quality attributes affected:
+
+Correctness/Liveness, Performance/Throughput, Maintainability and Scalability.
+
+## Evidence:
+After the fix we can see the next message in the terminal:
+![Deadlock detectado con LockPair original](/docs/images/afterFix.png)
+
+And then that we put the correct implementation and the solution:
+
+- java -cp target/classes edu.eci.arsw.relicrush.app.InvariantProbe 8 6 50
+  ![Prueba1 8 6 50](/docs/images/prueba1.png)
+
+- java -cp target/classes edu.eci.arsw.relicrush.app.InvariantProbe 32 8 100
+  ![Prueba2 32 8 100](/docs/images/prueba2.png)
+
+- java -cp target/classes edu.eci.arsw.relicrush.app.InvariantProbe 128 8 100
+  ![Prueba3 128 8 100](/docs/images/prueba3.png)
+
+
+## Consequences:
+
+On the positive side, we find that:
+1. Deadlocks are eliminated by design, not by probability.
+2. Zero concurrency cost.
+3. Negligible runtime cost.
+
+On the negative side, we find that:
+1. An implicit dependency is created: “everyone must go through LockPair.”
+2. Coupling to id() being stable and immutable
+
+## Risks:
+
+The risks we would face with this are that, in the future, the following could happen:
+
+1. Someone could take two station locks without going through LockPair.
+2. id() could cease to be stable or unique.
+3. It could grow to more than 2 resources per operation.
+
+---
 
 ---
 
