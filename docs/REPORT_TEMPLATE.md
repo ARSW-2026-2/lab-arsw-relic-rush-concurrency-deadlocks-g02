@@ -10,7 +10,7 @@
 
 Repository: `https://github.com/ARSW-2026-2/lab-arsw-relic-rush-concurrency-deadlocks-g02.git`
 
-Final commit: `SHA`
+Final commit: `We put the final conclusions of the lab, and finish other parts of the Report.` - This is the final commit, to the all points of the Lab, But the repository have other commits with the Bonus Part.
 
 ## 1. Baseline observations
 
