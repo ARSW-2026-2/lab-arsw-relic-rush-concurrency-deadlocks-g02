@@ -14,16 +14,24 @@ Final commit: `SHA`
 
 ## 1. Baseline observations
 
-- Command(s) executed:
-- What happened?
-- Was the round invariant always preserved?
-- Did the game stop unexpectedly?
+- Command(s) executed: `java -cp target/classes edu.eci.arsw.relicrush.app.RelicRushMain`
+- What happened?: The game started with 8 adventurers, 6 stations, and 25 rounds, but the watchdog detected a deadlock and terminated the process.
+- Was the round invariant always preserved?: It could not be fully verified, as the game was stopped before all rounds were completed.
+- Did the game stop unexpectedly?: Yes. The program stopped because the watchdog detected a deadlock.
 
 Evidence:
 
+We can see the next message in the terminal:
+
 ```text
-PASTE RELEVANT OUTPUT
+Starting Relic Rush: adventurers=8, stations=6, rounds=25
+
+*** DEADLOCK DETECTED BY GAME WATCHDOG ***
+Run DeadlockProbe or jcmd <PID> Thread.print for a focused diagnosis.
+The starter exits here so you do not have to kill a frozen process manually.
 ```
+
+![Baseline Observation](/docs/images/baselineObservations.png)
 
 ## 2. Coordination analysis
 
@@ -122,6 +130,8 @@ Discuss:
 > The solution consistently passes DeadlockProbe and the stress-testing InvariantProbe without freezing or breaking invariants.
 ## 8. Conclusions
 
-1.
-2.
-3.
+1. The lab helped us understand that there are different problems in concurrent programming, and each one requires a specific solution. CyclicBarrier is used to coordinate threads between different phases, while AtomicInteger and ConcurrentLinkedQueue allow for the safe management of shared state. On the other hand, the problem of deadlocks was solved by establishing an order for acquiring resources. This demonstrates that one should not always use the same mechanism, but rather first identify the problem and then apply the appropriate tool.
+
+2. It was also demonstrated that improving a program’s security does not necessarily mean sacrificing performance or parallelism. In the case of ForgeLedger and LockPair, the solutions made it possible to fix concurrency issues without bringing down the entire system. Threads were able to continue working in parallel when using different resources, and the additional cost of the solutions was low. This demonstrates that a good concurrency solution must be tailored to the problem and avoid unnecessary restrictions.
+
+3. Finally, the lab demonstrated the importance of conducting repeated tests to verify that a solution actually works. In concurrent programming, just because an error doesn’t appear in a single run doesn’t mean the problem has gone away. That’s why it was necessary to run multiple tests and increase the number of players to verify the system’s behavior under heavier load. This allowed us to be more confident that the implemented solutions actually eliminated race conditions and deadlocks, rather than simply making them less frequent.
