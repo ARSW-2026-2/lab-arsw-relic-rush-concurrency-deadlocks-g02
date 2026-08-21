@@ -21,6 +21,13 @@ public final class GameEngine {
     private final CyclicBarrier roundEnd;
     private final AtomicBoolean finished = new AtomicBoolean(false);
 
+    // --- GUI support (bonus). None of this touches roundStart/roundEnd's
+    // party count, wait semantics, or LockPair's ordering rule. ---
+    private volatile GameListener listener = GameListener.NONE;
+    private final Object pauseLock = new Object();
+    private volatile boolean paused = false;
+    private volatile boolean stopRequested = false;
+
     public GameEngine(GameConfig config) {
         this.config = config;
         this.stations = createStations(config.stations());
@@ -38,18 +45,95 @@ public final class GameEngine {
         }
     }
 
+    public void setListener(GameListener listener) {
+        this.listener = listener == null ? GameListener.NONE : listener;
+    }
+
+    public GameConfig config() {
+        return config;
+    }
+
+    public List<ForgeStation> stations() {
+        return stations;
+    }
+
+    public List<Adventurer> adventurers() {
+        return List.copyOf(adventurers);
+    }
+
+    /**
+     * Requests a pause before the NEXT round. Because roundStart is a
+     * CyclicBarrier that needs (adventurers + 1) parties, simply having the
+     * coordinator thread hold off calling roundStart.await() is enough to
+     * freeze every adventurer thread at the barrier -- no extra flag needs
+     * to be checked inside Adventurer at all.
+     */
+    public void pause() {
+        synchronized (pauseLock) {
+            paused = true;
+        }
+    }
+
+    public void resume() {
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll();
+        }
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /**
+     * Cooperative stop: any adventurer already blocked on roundStart or
+     * roundEnd is released via BrokenBarrierException (each Adventurer
+     * already catches that exception and exits its loop). Any adventurer
+     * mid-turn simply finishes its current craft and then hits the (now
+     * broken/reset) barrier and exits the same way.
+     */
+    public void requestStop() {
+        stopRequested = true;
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll();
+        }
+        roundStart.reset();
+        roundEnd.reset();
+    }
+
+    public boolean isStopRequested() {
+        return stopRequested;
+    }
+
     public void run() throws InterruptedException, BrokenBarrierException {
         startDeadlockWatchdog();
         adventurers.forEach(Thread::start);
+        listener.onGameStarted(config, stations, adventurers());
 
-        for (int round = 1; round <= config.rounds(); round++) {
-            // Scenario 2: workers wait until the coordinator starts the round.
-            roundStart.await();
+        RoundSnapshot lastSnapshot = null;
+        try {
+            for (int round = 1; round <= config.rounds(); round++) {
+                awaitIfPaused();
+                if (stopRequested) {
+                    break;
+                }
 
-            // Scenario 3: coordinator waits until every worker completes the round.
-            roundEnd.await();
+                // Scenario 2: workers wait until the coordinator starts the round.
+                roundStart.await();
 
-            printRoundSnapshot(round);
+                // Scenario 3: coordinator waits until every worker completes the round.
+                roundEnd.await();
+
+                lastSnapshot = buildSnapshot(round);
+                printRoundSnapshot(lastSnapshot);
+                listener.onRoundCompleted(lastSnapshot);
+            }
+        } catch (BrokenBarrierException e) {
+            if (!stopRequested) {
+                throw e; // a real, unrequested break -> surface it
+            }
+            // else: this is the expected effect of requestStop(); fall through.
         }
 
         for (Adventurer adventurer : adventurers) {
@@ -58,6 +142,15 @@ public final class GameEngine {
 
         finished.set(true);
         printFinalSummary();
+        listener.onGameFinished(lastSnapshot, stopRequested);
+    }
+
+    private void awaitIfPaused() throws InterruptedException {
+        synchronized (pauseLock) {
+            while (paused && !stopRequested) {
+                pauseLock.wait();
+            }
+        }
     }
 
     private void startDeadlockWatchdog() {
@@ -83,18 +176,27 @@ public final class GameEngine {
         watchdog.start();
     }
 
-    private void printRoundSnapshot(int round) {
+    private RoundSnapshot buildSnapshot(int round) {
         int scoreSum = adventurers.stream().mapToInt(Adventurer::score).sum();
         int ledgerTotal = ledger.totalCrafted();
         int eventCount = ledger.eventCount();
+        boolean invariantOk = (scoreSum == ledgerTotal && ledgerTotal == eventCount);
 
+        List<RoundSnapshot.PlayerScore> playerScores = adventurers.stream()
+                .map(a -> new RoundSnapshot.PlayerScore(a.playerId(), a.getName(), a.score(), a.status()))
+                .toList();
+
+        return new RoundSnapshot(round, config.rounds(), scoreSum, ledgerTotal, eventCount, invariantOk, playerScores);
+    }
+
+    private void printRoundSnapshot(RoundSnapshot snapshot) {
         System.out.printf(
                 "ROUND %02d | scoreSum=%d | ledger=%d | events=%d | invariant=%s%n",
-                round,
-                scoreSum,
-                ledgerTotal,
-                eventCount,
-                (scoreSum == ledgerTotal && ledgerTotal == eventCount) ? "OK" : "BROKEN");
+                snapshot.round(),
+                snapshot.scoreSum(),
+                snapshot.ledgerTotal(),
+                snapshot.eventCount(),
+                snapshot.invariantOk() ? "OK" : "BROKEN");
     }
 
     private void printFinalSummary() {

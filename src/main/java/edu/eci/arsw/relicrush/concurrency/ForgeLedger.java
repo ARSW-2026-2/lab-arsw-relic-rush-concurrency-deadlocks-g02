@@ -8,18 +8,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Global match ledger.
- *
- * Starter implementation is intentionally NOT thread-safe.
+ * Global match ledger. Thread-safe: totalCrafted uses an atomic
+ * read-modify-write and events uses a lock-free concurrent queue.
  */
 public final class ForgeLedger {
     private final AtomicInteger totalCrafted = new AtomicInteger(0);
     private final Queue<ForgeEvent> events = new ConcurrentLinkedQueue<>();
 
     public void record(ForgeEvent event) {
-        // TODO LAB 3: ++ is a read-modify-write operation and ArrayList is not
-        // designed for concurrent writes. Fix both responsibilities without
-        // serializing the entire game behind one global monitor.
         totalCrafted.incrementAndGet();
         events.add(event);
     }

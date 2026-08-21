@@ -9,6 +9,12 @@ import edu.eci.arsw.relicrush.model.ForgeStation;
  * one, regardless of the order the caller passed them in. This breaks
  * the "circular wait" Coffman condition without introducing any
  * global/game-wide lock.
+ *
+ * GUI NOTE (bonus): the markOccupied/markFree calls are purely observational
+ * bookkeeping for the graphical view. They execute strictly inside the
+ * synchronized blocks that already hold each station's monitor, so they do
+ * not add any new lock, do not change acquisition order, and do not weaken
+ * the deadlock-prevention guarantee proven by DeadlockProbe/InvariantProbe.
  */
 public final class LockPair {
 
@@ -16,10 +22,14 @@ public final class LockPair {
     }
 
     public static void withBoth(ForgeStation first, ForgeStation second, Runnable action) {
-        // TODO LAB 3: Solved
         if (first.id() == second.id()) {
             synchronized (first) {
-                action.run();
+                first.markOccupied(Thread.currentThread().getName());
+                try {
+                    action.run();
+                } finally {
+                    first.markFree();
+                }
             }
             return;
         }
@@ -28,10 +38,16 @@ public final class LockPair {
         ForgeStation higher = first.id() < second.id() ? second : first;
 
         synchronized (lower) {
+            lower.markOccupied(Thread.currentThread().getName());
             synchronized (higher) {
-                action.run();
+                higher.markOccupied(Thread.currentThread().getName());
+                try {
+                    action.run();
+                } finally {
+                    higher.markFree();
+                }
             }
+            lower.markFree();
         }
-
     }
 }
