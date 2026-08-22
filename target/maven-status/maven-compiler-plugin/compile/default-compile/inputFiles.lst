@@ -7,5 +7,15 @@
 /Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/game/Adventurer.java
 /Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/game/GameConfig.java
 /Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/game/GameEngine.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/game/GameListener.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/game/RoundSnapshot.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/AdventurerPanel.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/BackgroundPanel.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/ControlPanel.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/FontLoader.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/GameController.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/RelicRushGuiApp.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/ScoreboardPanel.java
+/Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/gui/StationPanel.java
 /Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/model/ForgeEvent.java
 /Users/santitorres105/Downloads/lab-arsw-relic-rush-concurrency-deadlocks-g02/src/main/java/edu/eci/arsw/relicrush/model/ForgeStation.java

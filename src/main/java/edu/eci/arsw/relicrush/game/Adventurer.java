@@ -24,6 +24,10 @@ public final class Adventurer extends Thread {
 
     private int score;
 
+    // GUI NOTE (bonus): purely observational, read by the UI thread only.
+    // "IDLE" / "WAITING_ROUND" / "CRAFTING" never influences game logic.
+    private volatile String status = "WAITING_ROUND";
+
     public Adventurer(
             int playerId,
             List<ForgeStation> stations,
@@ -49,18 +53,27 @@ public final class Adventurer extends Thread {
         return score;
     }
 
+    public String status() {
+        return status;
+    }
+
     @Override
     public void run() {
         try {
             for (int round = 1; round <= rounds; round++) {
+                status = "WAITING_ROUND";
                 roundStart.await();
                 playTurn(round);
+                status = "WAITING_ROUND";
                 roundEnd.await();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (BrokenBarrierException e) {
-            // The coordinator may break the barrier if the game is aborted.
+            // The coordinator may break the barrier if the game is aborted
+            // (e.g. the GUI "Stop" button).
+        } finally {
+            status = "FINISHED";
         }
     }
 
@@ -74,6 +87,7 @@ public final class Adventurer extends Thread {
         ForgeStation first = stations.get(firstIndex);
         ForgeStation second = stations.get(secondIndex);
 
+        status = "CRAFTING";
         LockPair.withBoth(first, second, () -> {
             // score is only written by this player's thread.
             score++;
