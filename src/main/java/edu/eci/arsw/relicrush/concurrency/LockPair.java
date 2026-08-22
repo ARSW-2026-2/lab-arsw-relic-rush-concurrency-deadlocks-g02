@@ -3,10 +3,18 @@ package edu.eci.arsw.relicrush.concurrency;
 import edu.eci.arsw.relicrush.model.ForgeStation;
 
 /**
- * Starter implementation intentionally contains a deadlock risk.
+ * LAB 3 - Part V: deadlock prevention via deterministic lock ordering.
+ * All forge stations are ordered globally by ForgeStation.id(); the
+ * lower-id station's monitor is always acquired before the higher-id
+ * one, regardless of the order the caller passed them in. This breaks
+ * the "circular wait" Coffman condition without introducing any
+ * global/game-wide lock.
  *
- * Students: do NOT replace this with one global lock. Preserve concurrency
- * between forge operations that use disjoint stations.
+ * GUI NOTE (bonus): the markOccupied/markFree calls are purely observational
+ * bookkeeping for the graphical view. They execute strictly inside the
+ * synchronized blocks that already hold each station's monitor, so they do
+ * not add any new lock, do not change acquisition order, and do not weaken
+ * the deadlock-prevention guarantee proven by DeadlockProbe/InvariantProbe.
  */
 public final class LockPair {
 
@@ -14,23 +22,32 @@ public final class LockPair {
     }
 
     public static void withBoth(ForgeStation first, ForgeStation second, Runnable action) {
-        // TODO LAB 3: This acquisition strategy can create circular wait.
-        // Fix it using a deterministic ordering strategy (or justify another
-        // deadlock-prevention approach) while preserving fine-grained locking.
-        synchronized (first) {
-            // This small delay makes the deadlock easier to reproduce in the starter.
-            sleepQuietly(2);
-            synchronized (second) {
-                action.run();
+        if (first.id() == second.id()) {
+            synchronized (first) {
+                first.markOccupied(Thread.currentThread().getName());
+                try {
+                    action.run();
+                } finally {
+                    first.markFree();
+                }
             }
+            return;
         }
-    }
 
-    private static void sleepQuietly(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        ForgeStation lower = first.id() < second.id() ? first : second;
+        ForgeStation higher = first.id() < second.id() ? second : first;
+
+        synchronized (lower) {
+            lower.markOccupied(Thread.currentThread().getName());
+            synchronized (higher) {
+                higher.markOccupied(Thread.currentThread().getName());
+                try {
+                    action.run();
+                } finally {
+                    higher.markFree();
+                }
+            }
+            lower.markFree();
         }
     }
 }
