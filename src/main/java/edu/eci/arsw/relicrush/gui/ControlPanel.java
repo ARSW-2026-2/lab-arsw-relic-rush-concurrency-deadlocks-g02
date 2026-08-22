@@ -8,67 +8,125 @@ import java.util.function.Consumer;
 
 /**
  * Top panel: lets the user pick adventurers/stations/rounds before Start,
- * and exposes Start/Pause/Resume/Stop. Button enablement is a small state
- * machine so it's impossible to e.g. click Resume while already running.
+ * and exposes Start/Pause/Resume/Stop with a dark medieval forge theme.
  */
 public final class ControlPanel extends JPanel {
 
     public enum RunState { IDLE, RUNNING, PAUSED, FINISHED }
 
     private final JSpinner adventurersSpinner = new JSpinner(new SpinnerNumberModel(8, 2, 500, 1));
-    private final JSpinner stationsSpinner = new JSpinner(new SpinnerNumberModel(6, 2, 50, 1));
+    private final JSpinner stationsSpinner = new JSpinner(new SpinnerNumberModel(6, 2, 100, 1));
     private final JSpinner roundsSpinner = new JSpinner(new SpinnerNumberModel(50, 1, 100_000, 1));
 
-    private final JButton startButton = new JButton("Start");
-    private final JButton pauseButton = new JButton("Pause");
-    private final JButton resumeButton = new JButton("Resume");
-    private final JButton stopButton = new JButton("Stop");
+    private final JButton startButton = createForgeButton("Forge Start", new Color(46, 139, 87));
+    private final JButton pauseButton = createForgeButton("Pause", new Color(184, 134, 11));
+    private final JButton resumeButton = createForgeButton("Resume", new Color(70, 130, 180));
+    private final JButton stopButton = createForgeButton("Stop", new Color(178, 34, 34));
+    private final JButton resetButton = createForgeButton("Reset", new Color(105, 105, 105));
+    public ControlPanel(Consumer<GameConfig> onStart, Runnable onPause, Runnable onResume, Runnable onStop, Runnable onReset) {
+        super(new FlowLayout(FlowLayout.LEFT, 15, 10));
 
-    public ControlPanel(Consumer<GameConfig> onStart, Runnable onPause, Runnable onResume, Runnable onStop) {
-        super(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        setOpaque(false);
+        setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 110), 2),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
 
-        add(labeled("Adventurers:", adventurersSpinner));
-        add(labeled("Stations:", stationsSpinner));
-        add(labeled("Rounds:", roundsSpinner));
+        styleSpinner(adventurersSpinner, "Adventurers:");
+        styleSpinner(stationsSpinner, "Stations:");
+        styleSpinner(roundsSpinner, "Rounds:");
 
         startButton.addActionListener(e -> onStart.accept(readConfig()));
         pauseButton.addActionListener(e -> onPause.run());
         resumeButton.addActionListener(e -> onResume.run());
         stopButton.addActionListener(e -> onStop.run());
+        resetButton.addActionListener(e -> onReset.run());
 
         add(startButton);
         add(pauseButton);
         add(resumeButton);
         add(stopButton);
-
+        add(resetButton);
         setState(RunState.IDLE);
     }
 
+    private JButton createForgeButton(String text, Color baseColor) {
+        JButton btn = new JButton(text);
+        btn.setFont(FontLoader.getCustomFont(10f));
+        btn.setForeground(Color.WHITE);
+        btn.setBackground(baseColor);
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(60, 60, 70), 2),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)
+        ));
+
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
+    }
+
+    private void styleSpinner(JSpinner spinner, String labelText) {
+        JLabel label = new JLabel(labelText);
+        label.setFont(FontLoader.getCustomFont(10f));
+        label.setForeground(Color.WHITE);
+
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor defEditor) {
+            defEditor.getTextField().setBackground(new Color(30, 30, 40));
+            defEditor.getTextField().setForeground(Color.WHITE);
+            defEditor.getTextField().setCaretColor(Color.WHITE);
+            defEditor.getTextField().setFont(new Font("Monospaced", Font.BOLD, 12));
+        }
+
+        add(label);
+        add(spinner);
+    }
+
     private GameConfig readConfig() {
-        return new GameConfig(
-                (Integer) adventurersSpinner.getValue(),
-                (Integer) stationsSpinner.getValue(),
-                (Integer) roundsSpinner.getValue());
+        int adv = (int) adventurersSpinner.getValue();
+        int st = (int) stationsSpinner.getValue();
+        int rounds = (int) roundsSpinner.getValue();
+        return new GameConfig(adv, st, rounds);
     }
 
-    /** Central place that enforces which buttons make sense in each state. */
     public void setState(RunState state) {
-        boolean idleOrFinished = state == RunState.IDLE || state == RunState.FINISHED;
-
-        adventurersSpinner.setEnabled(idleOrFinished);
-        stationsSpinner.setEnabled(idleOrFinished);
-        roundsSpinner.setEnabled(idleOrFinished);
-
-        startButton.setEnabled(idleOrFinished);
-        pauseButton.setEnabled(state == RunState.RUNNING);
-        resumeButton.setEnabled(state == RunState.PAUSED);
-        stopButton.setEnabled(state == RunState.RUNNING || state == RunState.PAUSED);
+        switch (state) {
+            case IDLE -> {
+                setSpinnersEnabled(true);
+                startButton.setEnabled(true);
+                pauseButton.setEnabled(false);
+                resumeButton.setEnabled(false);
+                stopButton.setEnabled(false);
+                resetButton.setEnabled(false);
+            }
+            case RUNNING -> {
+                setSpinnersEnabled(false);
+                startButton.setEnabled(false);
+                pauseButton.setEnabled(true);
+                resumeButton.setEnabled(false);
+                stopButton.setEnabled(true);
+            }
+            case PAUSED -> {
+                setSpinnersEnabled(false);
+                startButton.setEnabled(false);
+                pauseButton.setEnabled(false);
+                resumeButton.setEnabled(true);
+                stopButton.setEnabled(true);
+            }
+            case FINISHED -> {
+                setSpinnersEnabled(true);
+                startButton.setEnabled(true);
+                pauseButton.setEnabled(false);
+                resumeButton.setEnabled(false);
+                stopButton.setEnabled(false);
+                resetButton.setEnabled(true);
+            }
+        }
     }
 
-    private static JComponent labeled(String label, JComponent field) {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        p.add(new JLabel(label));
-        p.add(field);
-        return p;
+    private void setSpinnersEnabled(boolean enabled) {
+        adventurersSpinner.setEnabled(enabled);
+        stationsSpinner.setEnabled(enabled);
+        roundsSpinner.setEnabled(enabled);
     }
 }

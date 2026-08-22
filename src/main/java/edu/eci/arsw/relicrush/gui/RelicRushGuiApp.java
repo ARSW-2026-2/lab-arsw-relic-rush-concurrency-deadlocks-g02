@@ -26,25 +26,33 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
     private final ScoreboardPanel scoreboardPanel = new ScoreboardPanel();
     private final GameController controller = new GameController(this);
 
-    // Pure UI refresh timer: reads volatile/atomic display-only fields
-    // (Adventurer.status(), ForgeStation.occupant()) at a fixed cadence.
-    // It is NOT a coordination mechanism for the game itself.
     private final Timer liveRefreshTimer;
 
     public RelicRushGuiApp() {
         super("Relic Rush - ARSW Lab 3");
 
         controlPanel = new ControlPanel(this::onStartRequested, this::onPauseRequested,
-                this::onResumeRequested, this::onStopRequested);
+                this::onResumeRequested, this::onStopRequested, this::onResetRequested);
 
         JPanel center = new JPanel(new GridLayout(1, 2, 8, 8));
         center.add(adventurerPanel);
         center.add(stationPanel);
 
-        setLayout(new BorderLayout(8, 8));
-        add(controlPanel, BorderLayout.NORTH);
-        add(center, BorderLayout.CENTER);
-        add(scoreboardPanel, BorderLayout.SOUTH);
+        BackgroundPanel mainBackground = new BackgroundPanel("/Forge.jpg");
+        mainBackground.setLayout(new BorderLayout(8, 8));
+
+        mainBackground.add(controlPanel, BorderLayout.NORTH);
+        mainBackground.add(center, BorderLayout.CENTER);
+        mainBackground.add(scoreboardPanel, BorderLayout.SOUTH);
+
+        controlPanel.setOpaque(false);
+        center.setOpaque(false);
+        adventurerPanel.setOpaque(false);
+        stationPanel.setOpaque(false);
+        scoreboardPanel.setOpaque(false);
+
+
+        setContentPane(mainBackground);
 
         scoreboardPanel.setPreferredSize(new Dimension(900, 260));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -81,8 +89,6 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
     private void onStopRequested() {
         scoreboardPanel.appendLog(">>> Stop requested. Releasing round barriers...");
         controller.stop();
-        // Buttons stay as-is until onFinished() fires, so the user can't
-        // double click Start while the engine thread is still joining.
     }
 
     private void refreshLiveState() {
@@ -94,7 +100,6 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
         adventurerPanel.refreshLiveStatus(engine.adventurers());
     }
 
-    // ---- GameController.UiCallback: always invoked on the EDT ----
 
     @Override
     public void onStarted(GameConfig config, List<ForgeStation> stations, List<Adventurer> adventurers) {
@@ -128,7 +133,29 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
         scoreboardPanel.appendLog(">>> ERROR: " + e);
     }
 
+    private void onResetRequested() {
+
+        adventurerPanel.reset();
+        scoreboardPanel.reset();
+        stationPanel.reset();
+
+        controlPanel.setState(ControlPanel.RunState.IDLE);
+        scoreboardPanel.setStateText("IDLE");
+
+        scoreboardPanel.appendLog("[SYSTEM] >> Forge reset complete. Ready for new configuration.");
+    }
+
     public static void main(String[] args) {
+        javax.swing.UIManager.put("Label.font", FontLoader.getCustomFont(10f));
+        javax.swing.UIManager.put("Button.font", FontLoader.getCustomFont(10f));
+
+        SwingUtilities.invokeLater(() -> new RelicRushGuiApp().setVisible(true));
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         SwingUtilities.invokeLater(() -> new RelicRushGuiApp().setVisible(true));
     }
 }

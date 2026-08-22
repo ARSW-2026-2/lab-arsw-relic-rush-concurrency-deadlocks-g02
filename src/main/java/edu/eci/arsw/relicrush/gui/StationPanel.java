@@ -3,68 +3,120 @@ package edu.eci.arsw.relicrush.gui;
 import edu.eci.arsw.relicrush.model.ForgeStation;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Shows one small card per forge station. Cards are refreshed by a periodic
- * Swing Timer that only READS ForgeStation.occupant()/isFree() -- this is a
- * plain UI refresh, not a coordination mechanism; it never blocks, waits on,
- * or otherwise participates in the game's locking protocol.
- */
-public final class StationPanel extends JPanel {
+public class StationPanel extends JPanel {
 
-    private static final Color FREE_COLOR = new Color(220, 245, 220);
-    private static final Color BUSY_COLOR = new Color(250, 220, 210);
+    private List<ForgeStation> stations;
+    private final List<JPanel> cards = new ArrayList<>();
 
-    private final List<JLabel> cards = new ArrayList<>();
-    private List<ForgeStation> stations = List.of();
+    private static final Color DARK_BG = new Color(43, 43, 54);
+    private static final Color BORDER_COLOR = new Color(100, 100, 110);
+    private static final Color NEON_GREEN = new Color(57, 255, 20);
+    private static final Color NEON_RED = new Color(255, 49, 49);
 
     public StationPanel() {
-        setBorder(BorderFactory.createTitledBorder("Forge Stations"));
-        setLayout(new GridLayout(0, 4, 8, 8));
+        super(new GridLayout(0, 3, 10, 10));
+
+        setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 2),
+                "Forge Stations",
+                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
+                javax.swing.border.TitledBorder.DEFAULT_POSITION,
+                FontLoader.getCustomFont(11f), Color.WHITE
+        ));
+        setOpaque(false);
     }
 
     public void initStations(List<ForgeStation> newStations) {
         this.stations = newStations;
         removeAll();
         cards.clear();
+
         for (ForgeStation station : newStations) {
-            JLabel card = new JLabel(station.name(), SwingConstants.CENTER);
-            card.setOpaque(true);
-            card.setBackground(FREE_COLOR);
-            card.setBorder(new LineBorder(Color.GRAY, 1));
-            card.setPreferredSize(new Dimension(140, 50));
-            cards.add(card);
-            add(card);
+
+            JPanel cardPanel = new JPanel(new BorderLayout(0, 5));
+            cardPanel.setBackground(DARK_BG);
+            cardPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            ));
+
+
+            JLabel nameLabel = new JLabel(station.name(), SwingConstants.CENTER);
+            nameLabel.setFont(FontLoader.getCustomFont(9f));
+            nameLabel.setForeground(Color.WHITE);
+            cardPanel.add(nameLabel, BorderLayout.NORTH);
+
+
+            String iconPath = "/default.png";
+            String sName = station.name().toLowerCase();
+
+
+            if (sName.contains("anvil")) iconPath = "/anvil.png";
+            else if (sName.contains("lens")) iconPath = "/gem2.png";
+            else if (sName.contains("press")) iconPath = "/book.png";
+            else if (sName.contains("furnace")) iconPath = "/dragon.png";
+            else if (sName.contains("altar")) iconPath = "/moon.png";
+            else if (sName.contains("table")) iconPath = "/gem2.png";
+            else if (sName.contains("forge")) iconPath = "/dragon.png";
+
+            JLabel iconLabel = new JLabel(loadIcon(iconPath, 45, 45), SwingConstants.CENTER);
+            cardPanel.add(iconLabel, BorderLayout.CENTER);
+
+            JLabel statusLabel = new JLabel("[ READY ]", SwingConstants.CENTER);
+            statusLabel.setFont(FontLoader.getCustomFont(9f));
+            statusLabel.setForeground(NEON_GREEN);
+            cardPanel.add(statusLabel, BorderLayout.SOUTH);
+
+            cards.add(cardPanel);
+            add(cardPanel);
         }
+
         revalidate();
         repaint();
     }
 
-    /** Invoked by a Swing Timer every ~150ms while a game is running. */
     public void refresh() {
+        if (stations == null || cards.isEmpty()) return;
+
         for (int i = 0; i < stations.size(); i++) {
             ForgeStation station = stations.get(i);
-            JLabel card = cards.get(i);
+            JPanel cardPanel = cards.get(i);
+
+            JLabel statusLabel = (JLabel) cardPanel.getComponent(1);
+
             String occupant = station.occupant();
             if (occupant == null) {
-                card.setText("<html><center>" + station.name() + "<br>free</center></html>");
-                card.setBackground(FREE_COLOR);
+                statusLabel.setText("[ READY ]");
+                statusLabel.setForeground(NEON_GREEN);
             } else {
-                card.setText("<html><center>" + station.name() + "<br>" + occupant + "</center></html>");
-                card.setBackground(BUSY_COLOR);
+                statusLabel.setText("[ " + occupant.toUpperCase() + " ]");
+                statusLabel.setForeground(NEON_RED);
             }
         }
     }
 
     public void reset() {
+        if (stations != null) stations.clear();
+        if (cards != null) cards.clear();
         removeAll();
-        cards.clear();
-        stations = List.of();
         revalidate();
         repaint();
+    }
+    private ImageIcon loadIcon(String path, int width, int height) {
+        try {
+            java.net.URL imgURL = getClass().getResource(path);
+            if (imgURL != null) {
+                ImageIcon icon = new ImageIcon(imgURL);
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Icono no encontrado en resources: " + path);
+        }
+        return null;
     }
 }
