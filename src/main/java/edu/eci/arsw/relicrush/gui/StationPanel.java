@@ -86,7 +86,7 @@ public class StationPanel extends JPanel {
             ForgeStation station = stations.get(i);
             JPanel cardPanel = cards.get(i);
 
-            JLabel statusLabel = (JLabel) cardPanel.getComponent(1);
+            JLabel statusLabel = (JLabel) cardPanel.getComponent(2);
 
             String occupant = station.occupant();
             if (occupant == null) {
@@ -100,9 +100,14 @@ public class StationPanel extends JPanel {
     }
 
     public void reset() {
-        if (stations != null) stations.clear();
-        if (cards != null) cards.clear();
+        this.stations = null;
+
+        if (cards != null) {
+            cards.clear();
+        }
+
         removeAll();
+
         revalidate();
         repaint();
     }

@@ -24,7 +24,7 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
     private final AdventurerPanel adventurerPanel = new AdventurerPanel();
     private final StationPanel stationPanel = new StationPanel();
     private final ScoreboardPanel scoreboardPanel = new ScoreboardPanel();
-    private final GameController controller = new GameController(this);
+    private GameController controller = new GameController(this);
 
     private final Timer liveRefreshTimer;
 
@@ -67,6 +67,7 @@ public final class RelicRushGuiApp extends JFrame implements GameController.UiCa
         adventurerPanel.reset();
         stationPanel.reset();
         scoreboardPanel.reset();
+        controller = new GameController(this);
         scoreboardPanel.setStateText("STARTING");
         controlPanel.setState(ControlPanel.RunState.RUNNING);
         controller.start(config);
